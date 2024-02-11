@@ -22,6 +22,28 @@ def save_model(epoch, model_name, model):
     torch.save(model, filename)
 
 
+def BCELossLogits(out, tar):
+    """
+    Manually calculate the BCEWithLogits loss for a batch of logits and targets
+    by explicitly applying the sigmoid function.
+
+    Parameters:
+    logits (torch.Tensor): The raw output from the network (before sigmoid).
+    targets (torch.Tensor): The ground truth labels (0 or 1).
+
+    Returns:
+    torch.Tensor: The BCE loss for the batch.
+    """
+    # Apply sigmoid to convert logits to probabilities
+    probabilities = torch.sigmoid(out)
+    
+    # Compute BCE loss manually
+    bce_loss = - (tar * torch.log(probabilities) + (1 - tar) * torch.log(1 - probabilities))
+    
+    # Return mean loss over the batch
+    return torch.mean(bce_loss)
+
+
 def train(args, model, optimizer, scheduler=None, model_name='model'):
     writer = SummaryWriter()
     train_loader = utils.get_data_loader(
@@ -53,7 +75,10 @@ def train(args, model, optimizer, scheduler=None, model_name='model'):
             # Function Outputs:
             #   - `output`: Computed loss, a single floating point number
             ##################################################################
-            loss = 0
+           
+            loss = BCELossLogits(output, target)
+
+            #loss = 0
             ##################################################################
             #                          END OF YOUR CODE                      #
             ##################################################################
