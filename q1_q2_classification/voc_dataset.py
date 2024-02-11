@@ -11,6 +11,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset
 
+from torchvision.transforms import v2 #added
 
 class VOCDataset(Dataset):
     CLASS_NAMES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car',
@@ -20,7 +21,7 @@ class VOCDataset(Dataset):
     for i in range(len(CLASS_NAMES)):
         INV_CLASS[CLASS_NAMES[i]] = i
 
-    def __init__(self, split, size, data_dir='data/VOCdevkit/VOC2007/'):
+    def __init__(self, split, size, data_dir='/content/drive/MyDrive/Colab Notebooks/VLR/HW1/data/VOCdevkit/VOC2007/'):
         super().__init__()
         self.split = split
         self.data_dir = data_dir
@@ -72,6 +73,17 @@ class VOCDataset(Dataset):
             # The difficult attribute specifies whether a class is ambiguous and by setting its weight to zero it does not contribute to the loss during training 
             weight_vec = torch.ones(20)
 
+            root = tree.getroot()
+
+            for item in root.findall('object'):
+              name = item.find('name').text
+              difficult = item.find('difficult').text
+              if name in self.CLASS_NAMES:
+                ind = self.get_class_index(name)
+                class_vec[ind] = 1
+              if difficult == 1:
+                  weight_vec[ind] = 0
+
             ######################################################################
             #                            END OF YOUR CODE                        #
             ######################################################################
@@ -92,7 +104,14 @@ class VOCDataset(Dataset):
         # change and you will have to write the correct value of `flat_dim`
         # in line 46 in simple_cnn.py
         ######################################################################
-        pass
+        transforms_list = transforms.Compose([
+          transforms.RandomResizedCrop(size=(224, 224), antialias=True),
+          transforms.RandomHorizontalFlip(p=0.5),
+          transforms.ToDtype(torch.float32, scale=True),
+          ])
+          
+        return transforms_list
+
         ######################################################################
         #                            END OF YOUR CODE                        #
         ######################################################################
@@ -124,3 +143,5 @@ class VOCDataset(Dataset):
         wgt = torch.FloatTensor(wgt_vec)
 
         return image, label, wgt
+
+        # if transforms doesn't work, try without the unpacking -- remove *
