@@ -30,9 +30,9 @@ class ARGS(object):
     # input batch size for testing
     test_batch_size=1000
     # number of epochs to train for
-    epochs = 14
+    epochs = 20
     # learning rate
-    lr = 1.0
+    lr = 0.01
     # Learning rate step gamma
     gamma = 0.7
     step_size = 1
