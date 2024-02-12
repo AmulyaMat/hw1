@@ -21,7 +21,7 @@ class VOCDataset(Dataset):
     for i in range(len(CLASS_NAMES)):
         INV_CLASS[CLASS_NAMES[i]] = i
 
-    def __init__(self, split, size, data_dir='/content/drive/MyDrive/Colab Notebooks/VLR/HW1/data/VOCdevkit/VOC2007/'):
+    def __init__(self, split, size, data_dir='/content/VOCdevkit/VOC2007'):
         super().__init__()
         self.split = split
         self.data_dir = data_dir
@@ -106,8 +106,7 @@ class VOCDataset(Dataset):
         ######################################################################
         transforms_list = transforms.Compose([
           transforms.RandomResizedCrop(size=(224, 224), antialias=True),
-          transforms.RandomHorizontalFlip(p=0.5),
-          transforms.ToDtype(torch.float32, scale=True),
+          transforms.RandomHorizontalFlip(p=0.5)
           ])
           
         return transforms_list
@@ -131,7 +130,7 @@ class VOCDataset(Dataset):
 
         trans = transforms.Compose([
             transforms.Resize(self.size),
-            *self.get_random_augmentations(),
+            self.get_random_augmentations(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.457, 0.407], std=[0.5, 0.5, 0.5]),
         ])
