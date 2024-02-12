@@ -38,7 +38,7 @@ class SimpleCNN(nn.Module):
         self.pool2 = nn.AvgPool2d(2, 2)
 
         # TODO set the correct dim here
-        self.flat_dim = 56*56*64          # based on augmentation here
+        self.flat_dim = 200704       # based on augmentation here
 
         # Sequential is another way of chaining the layers.
         self.fc1 = nn.Sequential(*get_fc(self.flat_dim, 128, 'none'))
