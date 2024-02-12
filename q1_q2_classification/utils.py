@@ -30,7 +30,7 @@ class ARGS(object):
     # input batch size for testing
     test_batch_size=1000
     # number of epochs to train for
-    epochs = 20
+    epochs = 10
     # learning rate
     lr = 0.01
     # Learning rate step gamma
@@ -47,7 +47,7 @@ class ARGS(object):
     # set true if using GPU during training
     use_cuda = False
     # input size
-    inp_size = 224
+    inp_size = 64
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
