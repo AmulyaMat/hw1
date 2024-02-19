@@ -22,26 +22,29 @@ def save_model(epoch, model_name, model):
     torch.save(model, filename)
 
 
-def BCELossLogits(out, tar):
+def BCELossLogits(out, tar, wgt):
     """
-    Manually calculate the BCEWithLogits loss for a batch of logits and targets
-    by explicitly applying the sigmoid function.
+    Manually calculate the weighted BCEWithLogits loss for a batch of logits and targets
+    by explicitly applying the sigmoid function and considering instance weights.
 
     Parameters:
-    logits (torch.Tensor): The raw output from the network (before sigmoid).
-    targets (torch.Tensor): The ground truth labels (0 or 1).
+    out (torch.Tensor): The raw output from the network (before sigmoid).
+    tar (torch.Tensor): The ground truth labels (0 or 1).
+    wgt (torch.Tensor): Weights for each instance, indicating the importance or confidence.
 
     Returns:
-    torch.Tensor: The BCE loss for the batch.
+    torch.Tensor: The weighted BCE loss for the batch.
     """
     # Apply sigmoid to convert logits to probabilities
     probabilities = torch.sigmoid(out)
     
-    # Compute BCE loss manually
-    bce_loss = - (tar * torch.log(probabilities) + (1 - tar) * torch.log(1 - probabilities))
+    # Compute weighted BCE loss manually
+    bce_loss = -wgt * (tar * torch.log(probabilities) + (1 - tar) * torch.log(1 - probabilities))
     
-    # Return mean loss over the batch
-    return torch.mean(bce_loss)
+    # Return mean loss over the batch, considering only the instances with non-zero weights
+    weighted_loss = torch.sum(bce_loss) / torch.sum(wgt)
+    return weighted_loss
+
 
 
 def train(args, model, optimizer, scheduler=None, model_name='model'):
@@ -55,6 +58,20 @@ def train(args, model, optimizer, scheduler=None, model_name='model'):
     model.train()
     model = model.to(args.device)
 
+    # def BCELoss(output, target):
+    #     """
+    #     Binary cross-entropy loss function for multi-label classification.
+
+    #     Args:
+    #         - `output`: Outputs from the network
+    #         - `target`: Ground truth labels, refer to voc.dataset.py
+    #     Return:
+    #         - `output`: Computed loss, a single floating point number.
+    #     """
+    #     output_prob = torch.sigmoid(output)
+    #     loss_per_class = -wgt * (target * torch.log(output_prob + 1e-10) + (1 - target) * torch.log(1 - output_prob + 1e-10))
+    #     return loss_per_class.sum(dim=1).mean()
+    
     cnt = 0
 
     for epoch in range(args.epochs):
@@ -64,25 +81,11 @@ def train(args, model, optimizer, scheduler=None, model_name='model'):
             optimizer.zero_grad()
             output = model(data)
 
-            ##################################################################
-            # TODO: Implement a suitable loss function for multi-label
-            # classification. You are NOT allowed to use any pytorch built-in
-            # functions. Remember to take care of underflows / overflows.
-            # Function Inputs:
-            #   - `output`: Outputs from the network
-            #   - `target`: Ground truth labels, refer to voc_dataset.py
-            #   - `wgt`: Weights (difficult or not), refer to voc_dataset.py
-            # Function Outputs:
-            #   - `output`: Computed loss, a single floating point number
-            ##################################################################
-           
-            loss = BCELossLogits(output, target)
+            #loss = BCELoss(output, target)  # See helper function above
 
-            #loss = 0
-            ##################################################################
-            #                          END OF YOUR CODE                      #
-            ##################################################################
-            
+            # Inside your training loop
+            loss = BCELossLogits(output, target, wgt)
+
             loss.backward()
             
             if cnt % args.log_every == 0:
