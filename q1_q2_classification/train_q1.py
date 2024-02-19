@@ -19,11 +19,11 @@ if __name__ == "__main__":
     # You should get a map of around 22 in 5 epochs
     ##################################################################
     args = ARGS(
-        epochs=20,
+        epochs=5,
         inp_size=64,
         use_cuda=False,
-        val_every=100,
-        lr= 0.01,
+        val_every=70,
+        lr= 0.001,
         batch_size= 64,
         step_size= 1,
         gamma= 0.7
@@ -34,8 +34,13 @@ if __name__ == "__main__":
 
     print(args)
 
+    mps_device = torch.device("mps")
+
+
     # initializes the model
+
     model = SimpleCNN(num_classes=len(VOCDataset.CLASS_NAMES), inp_size=64, c_dim=3)
+    model.to(mps_device)
     # initializes Adam optimizer and simple StepLR scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
