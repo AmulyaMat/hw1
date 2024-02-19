@@ -30,7 +30,7 @@ class ARGS(object):
     # input batch size for testing
     test_batch_size=1000
     # number of epochs to train for
-    epochs = 10
+    epochs = 20
     # learning rate
     lr = 0.01
     # Learning rate step gamma
@@ -47,7 +47,7 @@ class ARGS(object):
     # set true if using GPU during training
     use_cuda = False
     # input size
-    inp_size = 64
+    inp_size = 224
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
@@ -64,7 +64,8 @@ class ARGS(object):
     
     @property
     def device(self):
-        return torch.device("cuda" if self.use_cuda else "cpu")
+        #return torch.device("cuda" if self.use_cuda else "cpu")
+        return torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
 
 
 def get_data_loader(name='voc', train=True, batch_size=64, split='train', inp_size=224):
