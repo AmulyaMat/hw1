@@ -28,7 +28,7 @@ class SimpleCNN(nn.Module):
     """
     Model definition
     """
-    def __init__(self, num_classes=20, inp_size=28, c_dim=1):
+    def __init__(self, num_classes=10, inp_size=28, c_dim=1):
         super().__init__()
         self.num_classes = num_classes
         self.conv1 = nn.Conv2d(c_dim, 32, 5, padding=2)
@@ -37,8 +37,14 @@ class SimpleCNN(nn.Module):
         self.pool1 = nn.AvgPool2d(2, 2)
         self.pool2 = nn.AvgPool2d(2, 2)
 
-        # TODO set the correct dim here
-        self.flat_dim = 200704       # based on augmentation here
+        # Compute the size of the feature map after each layer
+        size_after_conv1 = (inp_size - 5 + 4) // 1 + 1  # kernel size=5, padding=2, stride=1
+        size_after_pool1 = size_after_conv1 // 2
+        size_after_conv2 = (size_after_pool1 - 5 + 4) // 1 + 1  # kernel size=5, padding=2, stride=1
+        size_after_pool2 = size_after_conv2 // 2
+        
+        # The flat dimension is the size of the feature map x num channels after last conv layer
+        self.flat_dim = 64 * (size_after_pool2 **2)
 
         # Sequential is another way of chaining the layers.
         self.fc1 = nn.Sequential(*get_fc(self.flat_dim, 128, 'none'))
