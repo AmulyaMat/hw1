@@ -8,7 +8,6 @@ import torchvision
 import torch.nn as nn
 import random
 
-
 class ResNet(nn.Module):
     def __init__(self, num_classes) -> None:
         super().__init__()
