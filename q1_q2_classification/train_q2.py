@@ -13,11 +13,20 @@ class ResNet(nn.Module):
     def __init__(self, num_classes) -> None:
         super().__init__()
 
-        self.resnet = torchvision.models.resnet18(weights='IMAGENET1K_V1')
+        #self.resnet = torchvision.models.resnet18(weights='IMAGENET1K_V1')
+        weights = ResNet18_Weights.IMAGENET1K_V1  # Correct way to specify weights
+        self.resnet = torchvision.models.resnet18(weights=weights)
         ##################################################################
-        # TODO: Define a FC layer here to process the features
+        # TODODefine a FC layer here to process the features
         ##################################################################
-        pass
+
+        self.resnet18 = nn.Sequential(*list(self.resnet.children())[:-1])
+        
+        # Define the new fully connected layer
+        self.fc = nn.Linear(512, num_classes)
+
+        #self.transforms = weights.transforms(antialias=True)
+        self.transforms = weights.transforms()
         ##################################################################
         #                          END OF YOUR CODE                      #
         ##################################################################
@@ -27,11 +36,22 @@ class ResNet(nn.Module):
         ##################################################################
         # TODO: Return raw outputs here
         ##################################################################
-        pass
+        with torch.no_grad():
+            x = self.transforms(x)
+        
+        # Pass input through ResNet18
+        x = self.resnet(x)
+        
+        # Flatten the output for the fully connected layer
+        x = torch.flatten(x, 1)
+        
+        # Pass the features through the new fully connected layer
+        y_pred = self.fc(x)
+        
+        return y_pred
         ##################################################################
         #                          END OF YOUR CODE                      #
         ##################################################################
-
 
 if __name__ == "__main__":
     np.random.seed(0)
