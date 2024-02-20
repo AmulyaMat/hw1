@@ -7,6 +7,7 @@ import numpy as np
 import torchvision
 import torch.nn as nn
 import random
+from torchvision.models import ResNet18_Weights # added
 
 class ResNet(nn.Module):
     def __init__(self, num_classes) -> None:
