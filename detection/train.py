@@ -33,14 +33,16 @@ if torch.cuda.is_available():
     print("Good to go!")
     DEVICE = torch.device("cuda")
 else:
-    print("Please check your GPU (if running on AWS). Using CPU instead.")
-    DEVICE = torch.device("cpu")
+    print("Please check your GPU (if running on AWS). Using mps instead.")
+   # DEVICE = torch.device("cpu")
+    DEVICE = torch.device("mps")
 
 NUM_CLASSES = 20
 BATCH_SIZE = 16
 IMAGE_SHAPE = (224, 224)
 NUM_WORKERS = 12
-DATASET_PATH = "../data"
+#DATASET_PATH = "../data"
+DATASET_PATH = "/Users/amulyamathur/Documents/HW1/data" 
 
 @dataclass
 class HyperParameters:
@@ -146,7 +148,7 @@ def main(args):
         )
     detector = FCOS(
         num_classes=NUM_CLASSES,
-        fpn_channels=64,
+        fpn_channels=1024,
         stem_channels=[64, 64],
     )
 
@@ -179,7 +181,7 @@ def main(args):
             num_classes=NUM_CLASSES, fpn_channels=64, stem_channels=[64, 64]
         )
         detector.to(device=DEVICE)
-        detector.load_state_dict(torch.load(weights_path, map_location="cpu"))
+        detector.load_state_dict(torch.load(weights_path, map_location="mps"))
         print("Generating example inference images...")
         inference_with_detector(
             detector,
@@ -196,7 +198,7 @@ def main(args):
         # Modify this depending on where you save your weights.
         weights_path = os.path.join(".", "fcos_detector.pt")
         detector.to(device=DEVICE)
-        detector.load_state_dict(torch.load(weights_path, map_location="cpu"))
+        detector.load_state_dict(torch.load(weights_path, map_location="mps"))
         inference_with_detector(
             detector,
             val_loader,
@@ -215,7 +217,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--visualize_gt", action="store_true")
     parser.add_argument(
-        "--overfit", type=bool, default=True
+        "--overfit", type=bool, default=False
     )
     parser.add_argument(
         "--inference", type=bool, default=False
