@@ -135,22 +135,30 @@ def fcos_get_deltas_from_locations(
             are normalized by feature stride.
     """
     ##########################################################################
-    # : Implement the logic to get deltas from feature locations.        #
+    # TODO: Implement the logic to get deltas from feature locations.        #
     ##########################################################################
     # Set this to Tensor of shape (N, 4) giving deltas (left, top, right, bottom)
     # from the locations to GT box edges, normalized by FPN stride.
-    deltas = torch.zeros([locations.shape[0], 4])
-    deltas[:, 0] = locations[:, 0] - gt_boxes[:, 0]
-    deltas[:, 1] = locations[:, 1] - gt_boxes[:, 1]
-    deltas[:, 2] = gt_boxes[:, 2] - locations[:, 0]
-    deltas[:, 3] = gt_boxes[:, 3] - locations[:, 1] 
 
-    deltas /= stride
-    deltas = deltas.to("cuda")
-    neg_ones = (torch.ones_like(gt_boxes[:,:4])*-1)
+    # Getting x-y coordinates from the locations
+    x, y = locations[:, 0], locations[:, 1]
 
-    deltas = torch.where(gt_boxes[:,:4]==neg_ones, neg_ones, deltas)
+    # Getting the box coordinates
+    x1, y1, x2, y2 = gt_boxes[:, 0], gt_boxes[:, 1], gt_boxes[:, 2], gt_boxes[:, 3]
 
+    # Check if the gt_boxes are background boxes
+    background_mask = (gt_boxes == -1).all(dim=1)
+
+    # Computing deltas
+    l = (x - x1) / stride
+    t = (y - y1) / stride
+    r = (x2 - x) / stride
+    b = (y2 - y) / stride
+
+    # Stacking deltas 
+    deltas = torch.stack([l, t, r, b], dim=1)
+    
+    deltas[background_mask] = -1
     ##########################################################################
     #                             END OF YOUR CODE                           #
     ##########################################################################
@@ -185,19 +193,29 @@ def fcos_apply_deltas_to_locations(
             resulting boxes `(x1, y1, x2, y2)`, absolute in image dimensions.
     """
     ##########################################################################
-    # : Implement the transformation logic to get boxes.                 #
+    # TODO: Implement the transformation logic to get boxes.                 #
     #                                                                        #
-    # : The model predicted deltas MAY BE negative, which is not valid   #
+    # NOTE: The model predicted deltas MAY BE negative, which is not valid   #
     # for our use-case because the feature center must lie INSIDE the final  #
     # box. Make sure to clip them to zero.                                   #
     ##########################################################################
-    output_boxes = torch.zeros([locations.shape[0], 4])
-    deltas = torch.clip(deltas, min=0.) * stride
-    output_boxes[:, 0] = locations[:, 0] - deltas[:, 0]
-    output_boxes[:, 1] = locations[:, 1] - deltas[:, 1]
-    output_boxes[:, 2] = locations[:, 0] + deltas[:, 2]
-    output_boxes[:, 3] = locations[:, 1] + deltas[:, 3]
+    # Ensure deltas are not negative
+    deltas = torch.clamp(deltas, min=0)
 
+    # Getting the x-y coordinates from the locations
+    x, y = locations[:, 0], locations[:, 1]
+
+    # Applying deltas to locations
+    x1 = x - deltas[:, 0] * stride
+    y1 = y - deltas[:, 1] * stride
+    x2 = x + deltas[:, 2] * stride
+    y2 = y + deltas[:, 3] * stride
+
+    # Stacking box coordinates 
+    output_boxes = torch.stack([x1, y1, x2, y2], dim=1)
+
+    background_mask = (deltas == -1).all(dim=1)
+    output_boxes[background_mask] = -1
     ##########################################################################
     #                             END OF YOUR CODE                           #
     ##########################################################################
@@ -223,21 +241,27 @@ def fcos_make_centerness_targets(deltas: torch.Tensor):
             Tensor of shape `(N, )` giving centerness regression targets.
     """
     ##########################################################################
-    # : Implement the centerness calculation logic.                      #
+    # TODO: Implement the centerness calculation logic.                      #
     # centerness is defined as sqrt(
     #   (min(left, right) * min(top, bottom)) 
     #   ______________________________________
     #   (max(left, right) * max(top, bottom))
     # )
     ##########################################################################
-    centerness = torch.zeros([deltas.shape[0], ], device='cuda')
-    l, t, r, b = torch.abs(deltas[:, 0]), torch.abs(deltas[:, 1]), torch.abs(deltas[:, 2]),torch.abs(deltas[:, 3])
-    centerness = torch.sqrt((torch.min(l, r) * torch.min(t, b))/(torch.max(l, r) * torch.max(t, b)))
+    l, t, r, b = deltas.unbind(dim=1)
 
-    neg_ones = torch.ones_like(deltas)*-1
-    inds = torch.all(deltas==neg_ones, dim=-1)
-
-    centerness[inds] = -1
+    # Identify background boxes
+    is_background = (deltas == -1).all(dim=1)
+    
+    # Compute centerness target
+    centerness = torch.sqrt(
+        (torch.min(l, r) * torch.min(t, b)) / (torch.max(l, r) * torch.max(t, b) + 1e-6)
+    )
+    # Ensure values are in range 0-1
+    centerness = torch.clamp(centerness, 0, 1)
+    
+    # Assign centerness of -1 for background boxes
+    centerness[is_background] = -1
     ##########################################################################
     #                             END OF YOUR CODE                           #
     ##########################################################################
@@ -248,7 +272,7 @@ def get_fpn_location_coords(
     shape_per_fpn_level: Dict[str, Tuple],
     strides_per_fpn_level: Dict[str, int],
     dtype: torch.dtype = torch.float32,
-    device: str = "cpu",
+    device: str = "mps",
 ) -> Dict[str, torch.Tensor]:
     """
     Map every location in FPN feature map to a point on the image. This point
@@ -269,7 +293,6 @@ def get_fpn_location_coords(
             tensors of shape `(H * W, 2)` giving `(xc, yc)` co-ordinates of the
             centers of receptive fields of the FPN locations, on input image.
     """
-
     # Set these to `(N, 2)` Tensors giving absolute location co-ordinates.
     location_coords = {
         level_name: None for level_name, _ in shape_per_fpn_level.items()
@@ -280,11 +303,19 @@ def get_fpn_location_coords(
         ##################################################################–####
         # TODO: Implement logic to get location co-ordinates below.          #
         ######################################################################
-        H, W = feat_shape[3], feat_shape[2]
-        xc_yc = torch.stack(torch.meshgrid(torch.arange(H), torch.arange(W)), dim=-1).view((-1,2)).cuda()
-        xc_yc = xc_yc * level_stride + level_stride//2 
-
-        location_coords[level_name] = xc_yc
+        # Meshgrid for feature map locations / full img space
+        y_c, x_c = torch.meshgrid(
+            torch.arange(0, feat_shape[2], dtype=dtype, device=device),  # Height of feature map
+            torch.arange(0, feat_shape[3], dtype=dtype, device=device)   # Width of feature map
+        )
+        
+        # Convert these to image coordinates by multiplying with the stride
+        x_c = (x_c.float() + 0.5) * level_stride
+        y_c = (y_c.float() + 0.5) * level_stride
+        
+        # Stack and reshape coordinates to the expected output shape
+        locations = torch.stack([y_c, x_c], dim=-1).reshape(-1, 2)
+        location_coords[level_name] = locations
         ######################################################################
         #                             END OF YOUR CODE                       #
         ######################################################################
