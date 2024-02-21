@@ -185,7 +185,7 @@ def train_detector(
     max_iters: int = 5000,
     log_period: int = 20,
     overfit=False,
-    device: str = "cpu",
+    device: str = "mps",
 ):
     """
     Train the detector. We use SGD with momentum and step decay.
