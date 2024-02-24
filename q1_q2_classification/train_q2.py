@@ -9,24 +9,23 @@ import torch.nn as nn
 import random
 from torchvision.models import ResNet18_Weights # added
 
-class ResNet(nn.Module):
+class ResNet_TSNE(nn.Module):
     def __init__(self, num_classes) -> None:
         super().__init__()
 
         weights = ResNet18_Weights.IMAGENET1K_V1
         self.resnet = torchvision.models.resnet18(weights=weights)
 
-        self.extra_fc = nn.Linear(1000, num_classes)
         self.flat_dim = 1000
+        self.extra_fc = nn.Linear(self.flat_dim, num_classes)
+        
 
     def forward(self, x):
       
-      N = x.size(0)
-      x = self.resnet(x)
-      flat_x = x.view(N, self.flat_dim)
-      out = self.extra_fc(flat_x)
-      return out
+      x = self.resnet(x)  # The output here is already flat, with a size of 512
+      out = self.extra_fc(x)  # Additional FC layer
 
+      return out
 
 
         ##################################################################
@@ -67,7 +66,7 @@ if __name__ == "__main__":
     # (except the last layer). You are free to use torchvision.models 
     ##################################################################
 
-    model = ResNet(len(VOCDataset.CLASS_NAMES)).to(args.device)
+    model = ResNet_TSNE(len(VOCDataset.CLASS_NAMES)).to(args.device)
 
     ##################################################################
     #                          END OF YOUR CODE                      #
@@ -78,5 +77,8 @@ if __name__ == "__main__":
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
     # trains model using your training code and reports test map
     test_ap, test_map = trainer.train(args, model, optimizer, scheduler)
-    torch.save(model, 'resnet_model.pth')
+    torch.save({
+        'ResNet_TSNE2_state_dict': model.state_dict(),
+    }, 'ResNet_TSNE2_checkpoint.pth')
+
     print('test map:', test_map)
