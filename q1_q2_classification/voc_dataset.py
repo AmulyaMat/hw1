@@ -21,7 +21,7 @@ class VOCDataset(Dataset):
     for i in range(len(CLASS_NAMES)):
         INV_CLASS[CLASS_NAMES[i]] = i
 
-    def __init__(self, split, size, data_dir='/content/VOCdevkit/VOC2007'):
+    def __init__(self, split, size, data_dir='/Users/amulyamathur/Desktop/hw1/data/VOCdevkit/VOC2007/'):
         super().__init__()
         self.split = split
         self.data_dir = data_dir
@@ -104,10 +104,11 @@ class VOCDataset(Dataset):
         # change and you will have to write the correct value of `flat_dim`
         # in line 46 in simple_cnn.py
         ######################################################################
-        transforms_list = transforms.Compose([
-          transforms.RandomResizedCrop(size=(224, 224), antialias=True),
-          transforms.RandomHorizontalFlip(p=0.5)
-          ])
+
+        transforms_list =[transforms.RandomResizedCrop(size=(64, 64), antialias=True),
+        transforms.RandomHorizontalFlip(p=0.5)]
+
+        # transforms_list = [transforms.CenterCrop(size=(64, 64))]   
           
         return transforms_list
 
@@ -130,11 +131,12 @@ class VOCDataset(Dataset):
 
         trans = transforms.Compose([
             transforms.Resize(self.size),
-            self.get_random_augmentations(),
+            *self.get_random_augmentations(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.457, 0.407], std=[0.5, 0.5, 0.5]),
-        ])
-
+        ]) 
+        
+ 
         img = trans(img)
         lab_vec, wgt_vec = self.anno_list[index] 
         image = torch.FloatTensor(img)
